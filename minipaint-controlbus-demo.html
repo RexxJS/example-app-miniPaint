@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>miniPaint Control Bus Demo - RexxJS Script Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            height: calc(100vh - 80px);
+            padding: 0;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow: auto;
+        }
+
+        .editor-section textarea {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+            font-size: 12px;
+            resize: none;
+            background: #fafafa;
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px 15px;
+            font-size: 11px;
+            background: #f0f2f5;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background: #ddd;
+        }
+
+        .status-dot.connected {
+            background: #4caf50;
+        }
+
+        .status-dot.error {
+            background: #f44336;
+        }
+
+        .output-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow: auto;
+        }
+
+        .output-label {
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        .output-box {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fafafa;
+            font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+            font-size: 11px;
+            color: #333;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .output-box.error {
+            color: #c41c3b;
+            background: #fff3f3;
+            border-color: #f88;
+        }
+
+        .worker-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .panel-left {
+            border-right: 1px solid #ddd;
+        }
+
+        .executing {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .panel-left {
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+
+            .container .panel {
+                height: 50vh;
+            }
+        }
+
+        .example-scripts {
+            font-size: 11px;
+            margin: 10px 0;
+        }
+
+        .example-scripts button {
+            display: block;
+            width: 100%;
+            padding: 6px;
+            margin-bottom: 4px;
+            background: #f0f2f5;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 11px;
+        }
+
+        .example-scripts button:hover {
+            background: #e8eaf6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 miniPaint Control Bus Demo</h1>
+        <p>RexxJS Script Editor + miniPaint Worker Frame</p>
+    </div>
+
+    <div class="container">
+        <!-- Director Frame (Script Editor) -->
+        <div class="panel panel-left">
+            <div class="panel-header">📝 RexxJS Script Editor</div>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="executeBtn" onclick="executeScript()">▶ Execute Script</button>
+                <button class="btn btn-secondary" id="clearBtn" onclick="clearOutput()">Clear Output</button>
+            </div>
+
+            <div class="status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Initializing...</span>
+            </div>
+
+            <div class="editor-section">
+                <textarea id="scriptEditor" placeholder="Write RexxJS script here...
+
+Example:
+ADDRESS MINIPAINT &quot;get-canvas-size&quot;
+SAY &quot;Canvas: &quot; RESULT
+
+ADDRESS MINIPAINT &quot;new-image width=800 height=600&quot;
+SAY &quot;Created new image&quot;
+"></textarea>
+            </div>
+
+            <div class="output-section">
+                <div class="output-label">Output:</div>
+                <div class="output-box" id="output"></div>
+            </div>
+
+            <div class="example-scripts" style="padding: 0 15px; margin-bottom: 15px;">
+                <strong style="font-size: 12px;">Example Scripts:</strong>
+                <button onclick="loadExample('get-size')">Get Canvas Size</button>
+                <button onclick="loadExample('new-image')">Create New Image</button>
+                <button onclick="loadExample('list-effects')">List Effects</button>
+                <button onclick="loadExample('effects-loop')">Apply Multiple Effects</button>
+            </div>
+        </div>
+
+        <!-- Worker Frame (miniPaint Application) -->
+        <div class="panel panel-right">
+            <div class="panel-header">🖼️ miniPaint Worker</div>
+            <div class="panel-content">
+                <iframe id="minipaint-worker" class="worker-frame" src="index.html"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Example scripts
+        const EXAMPLES = {
+            'get-size': `ADDRESS MINIPAINT "get-canvas-size"
+SAY "Current canvas size: " RESULT`,
+
+            'new-image': `ADDRESS MINIPAINT "new-image width=1024 height=768"
+SAY "Created new image"
+ADDRESS MINIPAINT "get-canvas-size"
+SAY "Canvas: " RESULT`,
+
+            'list-effects': `ADDRESS MINIPAINT "list-effects"
+SAY "Available effects:"
+SAY RESULT`,
+
+            'effects-loop': `ADDRESS MINIPAINT "new-image width=800 height=600"
+SAY "Created canvas"
+
+ADDRESS MINIPAINT "apply-effect blur radius=3"
+SAY "Applied blur"
+
+ADDRESS MINIPAINT "apply-effect sharpen amount=1.5"
+SAY "Applied sharpen"
+
+SAY "Done!"`
+        };
+
+        let directorBridge = null;
+        let isExecuting = false;
+
+        // Initialize when both frames are ready
+        window.addEventListener('load', async () => {
+            // Wait for miniPaint to load
+            const workerFrame = document.getElementById('minipaint-worker');
+
+            // Give miniPaint time to initialize
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // Import and setup the control bus
+            try {
+                // Since we can't import modules in global scope here, we'll use a different approach
+                // The worker frame should have the MiniPaintWorkerBridge setup
+                updateStatus('Connecting to miniPaint...', false);
+
+                // Check if worker bridge is ready
+                if (workerFrame.contentWindow.MiniPaintWorkerBridge) {
+                    updateStatus('Connected to miniPaint', true);
+
+                    // Create a simple director bridge using postMessage
+                    directorBridge = {
+                        sendRPC: async (method, params = {}) => {
+                            return new Promise((resolve, reject) => {
+                                const id = Math.random().toString(36);
+                                const timeout = setTimeout(() => {
+                                    delete pendingRequests[id];
+                                    reject(new Error(`Timeout for ${method}`));
+                                }, 30000);
+
+                                pendingRequests[id] = { resolve, reject, timeout };
+                                workerFrame.contentWindow.postMessage({
+                                    type: 'rpc-request',
+                                    id,
+                                    method,
+                                    params
+                                }, '*');
+                            });
+                        }
+                    };
+                } else {
+                    updateStatus('Waiting for miniPaint to initialize...', false);
+                    // Retry after a bit more time
+                    setTimeout(() => {
+                        if (workerFrame.contentWindow.MiniPaintWorkerBridge) {
+                            updateStatus('Connected to miniPaint', true);
+                        } else {
+                            updateStatus('Could not connect to miniPaint', false);
+                        }
+                    }, 2000);
+                }
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, false);
+                console.error('Setup error:', error);
+            }
+        });
+
+        const pendingRequests = {};
+
+        // Listen for RPC responses
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'rpc-response') {
+                const { id, success, result, error } = event.data;
+                if (pendingRequests[id]) {
+                    const { resolve, reject, timeout } = pendingRequests[id];
+                    clearTimeout(timeout);
+                    if (success) {
+                        resolve(result);
+                    } else {
+                        reject(new Error(error || 'Unknown error'));
+                    }
+                    delete pendingRequests[id];
+                }
+            }
+        });
+
+        function updateStatus(text, connected) {
+            document.getElementById('statusText').textContent = text;
+            const dot = document.getElementById('statusDot');
+            if (connected) {
+                dot.classList.add('connected');
+                dot.classList.remove('error');
+            } else {
+                dot.classList.remove('connected');
+                dot.classList.add('error');
+            }
+        }
+
+        function log(message, isError = false) {
+            const output = document.getElementById('output');
+            output.textContent += (output.textContent ? '\n' : '') + message;
+            output.classList.toggle('error', isError);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').textContent = '';
+            document.getElementById('output').classList.remove('error');
+        }
+
+        async function executeScript() {
+            if (isExecuting) return;
+            if (!directorBridge) {
+                log('ERROR: Not connected to miniPaint', true);
+                return;
+            }
+
+            isExecuting = true;
+            document.getElementById('executeBtn').disabled = true;
+            clearOutput();
+            log('Executing script...');
+
+            try {
+                const script = document.getElementById('scriptEditor').value.trim();
+                if (!script) {
+                    log('ERROR: Script is empty', true);
+                    return;
+                }
+
+                // Parse and execute RexxJS
+                const lines = script.split('\n').filter(l => l.trim());
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith('--')) continue;
+
+                    // Handle ADDRESS MINIPAINT commands
+                    if (trimmed.toUpperCase().startsWith('ADDRESS MINIPAINT')) {
+                        const match = trimmed.match(/ADDRESS MINIPAINT\s+"([^"]+)"/);
+                        if (match) {
+                            const command = match[1];
+                            try {
+                                log(`Executing: ADDRESS MINIPAINT "${command}"`);
+                                const result = await directorBridge.sendRPC(
+                                    command.split(' ')[0],
+                                    parseParams(command)
+                                );
+                                log(`Result: ${JSON.stringify(result)}`);
+                            } catch (error) {
+                                log(`ERROR: ${error.message}`, true);
+                            }
+                        }
+                    }
+                    // Handle SAY statements
+                    else if (trimmed.toUpperCase().startsWith('SAY')) {
+                        const message = trimmed.substring(3).trim();
+                        log(message);
+                    }
+                }
+
+                log('Script execution complete');
+            } catch (error) {
+                log(`ERROR: ${error.message}`, true);
+            } finally {
+                isExecuting = false;
+                document.getElementById('executeBtn').disabled = false;
+            }
+        }
+
+        function parseParams(command) {
+            const params = {};
+            const parts = command.split(/\s+/);
+
+            for (let i = 1; i < parts.length; i++) {
+                const [key, value] = parts[i].split('=');
+                if (key && value !== undefined) {
+                    if (value === 'true') params[key] = true;
+                    else if (value === 'false') params[key] = false;
+                    else if (!isNaN(value)) params[key] = Number(value);
+                    else params[key] = value.replace(/['"]/g, '');
+                }
+            }
+
+            return params;
+        }
+
+        function loadExample(name) {
+            if (EXAMPLES[name]) {
+                document.getElementById('scriptEditor').value = EXAMPLES[name];
+            }
+        }
+
+        // Auto-execute when script editor has content and Enter is pressed (Shift+Enter)
+        document.addEventListener('keydown', (e) => {
+            if (e.shiftKey && e.key === 'Enter' && document.activeElement.id === 'scriptEditor') {
+                executeScript();
+            }
+        });
+    </script>
+</body>
+</html>

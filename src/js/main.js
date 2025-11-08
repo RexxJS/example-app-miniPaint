@@ -23,6 +23,8 @@ import Base_search_class from './core/base-search.js';
 import File_open_class from './modules/file/open.js';
 import File_save_class from './modules/file/save.js';
 import * as Actions from './actions/index.js';
+import { initializeMiniPaintRexxHandler } from './modules/rexxjs/minipaint-rexx-handler.js';
+import { setupRexxScriptExecution } from './modules/rexxjs/execute-rexx.js';
 
 window.addEventListener('load', function (e) {
 	// Initiate app
@@ -50,6 +52,12 @@ window.addEventListener('load', function (e) {
 	window.State = Base_state;
 	window.FileOpen = File_open;
 	window.FileSave = File_save;
+
+	// Initialize RexxJS handler for ADDRESS MINIPAINT support
+	initializeMiniPaintRexxHandler();
+
+	// Setup script execution capability
+	setupRexxScriptExecution();
 
 	// Render all
 	GUI.init();
